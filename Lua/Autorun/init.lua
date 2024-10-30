@@ -8,7 +8,7 @@ NeurOS = NeurOS or {
 }
 
 
-print("terminal test has loaded")
+print("NeurOS has loaded")
 local FilePath = table.pack(...)[1]
 dofile(FilePath.."/Lua/Scripts/Helperfunctions.lua")
 dofile(FilePath.."/Lua/Scripts/Terminalinit.lua")
