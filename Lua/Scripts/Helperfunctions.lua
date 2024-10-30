@@ -24,8 +24,18 @@ function NeurOS.WriteToTerminal(item, message)
     local terminal = item.GetComponentString("Terminal")
     if terminal then
         --ShowOnTerminal(terminal, message)
+        messagehistory = terminal.messageHistory
+        messagehistory.Clear()
+        terminal.showMessage = ">> " .. message
+        terminal.SyncHistory()
+    end
+end
+
+function NeurOS.WriteToTerminalAsUser(item, message, client)
+    local terminal = item.GetComponentString("Terminal")
+    if terminal then
         terminal.ReceiveSignal(Signal(1),item.Connections[4])
-        terminal.showMessage = message
+        terminal.showMessage = client.Character.Name .. ": " .. message
         terminal.SyncHistory()
     end
 end

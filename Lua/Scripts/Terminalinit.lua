@@ -25,8 +25,15 @@ end
 
 function NeurOS.RegisterTerminal(item, id)
     local rootFolder = NeurOS.CreateFolder("/")
-    NeurOS.Terminals[item] = { id = id, fileSystem = { root = rootFolder, currentDir = rootFolder } }
+    NeurOS.Terminals[item] = {
+        id = id,
+        fileSystem = { root = rootFolder, currentDir = rootFolder },
+        users = {},
+        currentUser = nil,
+        sudoUser = nil
+    }
     NeurOS.TerminalLookup[id] = item
     print("Terminal " .. item.Name .. " initialized, terminal id = " .. id)
     NeurOS.WriteToTerminal(item, "Terminal initialized, terminal id = " .. id)
+    NeurOS.WriteToTerminal(item, "Please create your first user with: adduser <username>")
 end
