@@ -1,5 +1,5 @@
 if CLIENT then return end
-LuaUserData.MakeFieldAccessible(Descriptors['Barotrauma.Terminal'], 'messageHistory')
+LuaUserData.MakeFieldAccessible(Descriptors['Barotrauma.Items.Components.Terminal'], 'messageHistory')
 
 
 NeurOS = NeurOS or {
