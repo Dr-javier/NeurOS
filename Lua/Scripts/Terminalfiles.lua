@@ -104,6 +104,92 @@ NeurOS.RegisterCommand("ls", function(id, args)
     end
 end)
 
+NeurOS.RegisterCommand("nano", function(id, args)
+    if #args < 1 then
+        local item = NeurOS.GetTerminal(id)
+        NeurOS.WriteToTerminal(item, "Usage: nano <filename>")
+        return
+    end
+    
+    local terminalData = NeurOS.GetTerminalData(id)
+    local currentDir = terminalData and terminalData.fileSystem.currentDir
+    if not currentDir then
+        NeurOS.WriteToTerminal(NeurOS.GetTerminal(id), "File system not initialized.")
+        return
+    end
+    
+    local filename = args[1]
+    -- Check if file exists
+    local existingFile
+    for _, child in ipairs(currentDir.children) do
+        if child.name == filename then
+            if child.type == "folder" then
+                NeurOS.WriteToTerminal(NeurOS.GetTerminal(id), "Cannot edit a folder")
+                return
+            end
+            existingFile = child
+            break
+        end
+    end
+    
+    -- Create new file if it doesn't exist
+    if not existingFile then
+        existingFile = {
+            name = filename,
+            type = "file",
+            content = "",
+            parent = currentDir
+        }
+        table.insert(currentDir.children, existingFile)
+    end
+    
+    -- Set terminal to edit mode
+    terminalData.editMode = true
+    terminalData.editingFile = existingFile
+    
+    -- Split content into lines for editing
+    terminalData.editingLines = {}
+    if existingFile.content then
+        for line in existingFile.content:gmatch("[^\n]+") do
+            table.insert(terminalData.editingLines, line)
+        end
+    end
+    
+    local displayContent = existingFile.content or ""
+    if #terminalData.editingLines > 0 then
+        displayContent = displayContent .. "\nCurrent line count: " .. #terminalData.editingLines
+    end
+    
+    NeurOS.WriteToTerminal(NeurOS.GetTerminal(id), "Editing " .. filename .. 
+        "\nEnter content (':w' to save and exit, ':l <number>' to edit specific line):\n" .. displayContent)
+end)
+
+NeurOS.RegisterCommand("run", function(id, args)
+    if #args < 1 then
+        local item = NeurOS.GetTerminal(id)
+        NeurOS.WriteToTerminal(item, "Usage: run <filename>")
+        return
+    end
+    
+    local terminalData = NeurOS.GetTerminalData(id)
+    local currentDir = terminalData and terminalData.fileSystem.currentDir
+    if not currentDir then
+        NeurOS.WriteToTerminal(NeurOS.GetTerminal(id), "File system not initialized.")
+        return
+    end
+    
+    local filename = args[1]
+    -- Find file
+    for _, child in ipairs(currentDir.children) do
+        if child.name == filename and child.type == "file" then
+            NeurOS.WriteToTerminal(NeurOS.GetTerminal(id), "Contents of " .. filename .. ":\n" .. (child.content or ""))
+            return
+        end
+    end
+    
+    NeurOS.WriteToTerminal(NeurOS.GetTerminal(id), "File not found: " .. filename)
+end)
+
 function NeurOS.GetTerminalData(id)
     local item = NeurOS.GetTerminal(id)
     if item then

@@ -15,6 +15,10 @@ NeurOS.RegisterCommand("adduser", function(id, args)
     end
 
     local item = NeurOS.GetTerminal(id)
+    if not item then
+        print("Item not found")
+        return
+    end
     local terminal = NeurOS.Terminals[item]
     local username = args[1]
     local password = args[2]
@@ -105,6 +109,19 @@ NeurOS.RegisterCommand("logout", function(id, args)
     terminal.currentUser = nil
     terminal.sudoUser = nil
     NeurOS.WriteToTerminal(item, "Logged out successfully")
+end)
+
+NeurOS.RegisterCommand("clearall", function(id, args)
+    local item = NeurOS.GetTerminal(id)
+    local terminal = NeurOS.Terminals[item]
+    
+    if not terminal.messageHistory then
+        NeurOS.WriteToTerminal(item, "No messages to clear")
+        return
+    end
+
+    NeurOS.ClearTerminal(item)
+    NeurOS.WriteToTerminal(item, "All messages cleared")
 end)
 
 NeurOS.RegisterCommand("sudo", function(id, args)

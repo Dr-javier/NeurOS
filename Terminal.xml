@@ -1,0 +1,46 @@
+<Items>
+    <Item name="Smart Terminal" identifier="neuros_terminal" category="Electrical" Tags="smallitem,logic" cargocontaineridentifier="metalcrate" scale="0.5" impactsoundtag="impact_metal_light" isshootable="true" GrabWhenSelected="true">
+    <Upgrade gameversion="0.10.0" scale="*0.5" />
+    <Sprite texture="Content/Items/Electricity/signalcomp.png" depth="0.8" sourcerect="0,368,144,128" origin="0.5,0.3" canflipx="false" />
+    <Price baseprice="200" minleveldifficulty="10">
+      <Price storeidentifier="merchantoutpost" />
+      <Price storeidentifier="merchantcity" multiplier="0.9" />
+      <Price storeidentifier="merchantresearch" multiplier="1.25" />
+      <Price storeidentifier="merchantmilitary" />
+      <Price storeidentifier="merchantmine" />
+      <Price storeidentifier="merchantengineering" multiplier="0.9" />
+    </Price>
+    <PreferredContainer primary="reactorcab" secondary="engcab" />
+    <Deconstruct time="10">
+      <Item identifier="plastic" />
+      <Item identifier="copper" />
+      <Item identifier="tin" />
+      <Item identifier="silicon" />
+    </Deconstruct>
+    <Fabricate suitablefabricators="fabricator" requiredtime="30">
+      <RequiredSkill identifier="electrical" level="80" />
+      <RequiredItem identifier="fpgacircuit" count="2" />
+      <RequiredItem identifier="tin" />
+      <RequiredItem identifier="silicon" />
+    </Fabricate>
+    <Body width="120" height="75" density="20" />
+    <Terminal canbeselected="true" msg="ItemMsgInteractSelect" AllowInGameEditing="false">
+        <StatusEffect type="OnUse" target="This,Character" > <!-- targets both character and item for hooks -->
+            <Hook name="TerminalUse" /> <!-- This is the hook that will be called when the terminal is used -->
+        </StatusEffect>
+        <GuiFrame relativesize="0.35,0.35" anchor="Center" style="ItemUI" />
+    </Terminal>
+    <Holdable selectkey="Select" pickkey="Use" slots="Any,RightHand,LeftHand" msg="ItemMsgDetachWrench" PickingTime="5.0" aimpos="65,-10" handle1="0,0" attachable="true" aimable="true" attachedbydefault="true">
+      <RequiredItem items="wrench" type="Equipped" />
+    </Holdable>
+    <ConnectionPanel selectkey="Action" canbeselected="true" msg="ItemMsgRewireScrewdriver" hudpriority="10">
+      <GuiFrame relativesize="0.2,0.32" minsize="400,350" maxsize="480,420" anchor="Center" style="ConnectionPanel" />
+      <RequiredItem identifier="screwdriver" type="Equipped" />
+      <input name="signal_in" displayname="connection.signalin" />
+      <output name="signal_out" displayname="connection.signalout" />
+      <input name="set_text_color" displayname="connection.settextcolor" />
+      <input name="clear_text" displayname="connection.cleartext" />
+    </ConnectionPanel>
+  </Item>
+</Items>
+

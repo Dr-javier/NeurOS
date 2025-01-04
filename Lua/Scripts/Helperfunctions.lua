@@ -20,18 +20,87 @@ function NeurOS.GetTerminal(id)
     return NeurOS.TerminalLookup[id] or nil
 end
 
-function NeurOS.WriteToTerminal(item, message)
+function NeurOS.WriteToTerminal(item, message, editmode)
     local terminal = item.GetComponentString("Terminal")
     if terminal then
-        --ShowOnTerminal(terminal, message)
         messagehistory = terminal.messageHistory
-        messagehistory.Clear()
-        terminal.showMessage = ">> " .. message
+        if not messagehistory then
+            print("messagehistory is nil")
+            return
+        end
+        NeurOS.ClearTerminal(item)
+        
+        -- Split message into lines
+        local lines = {}
+        for line in message:gmatch("[^\r\n]+") do
+            table.insert(lines, line)
+        end
+        
+        -- Send each line individually
+        for _, line in ipairs(lines) do
+            if editmode then
+                terminal.showMessage = line
+            else
+                terminal.showMessage = ">> " .. line
+            end
+            terminal.SyncHistory()
+        end
+    end
+end
+
+function NeurOS.ClearTerminal(item)
+    local terminal = item.GetComponentString("Terminal")
+    if terminal then
+        if not terminal.messageHistory then
+            print("history is nil")
+            return
+        end
+        --[[for _, entry in ipairs(terminal.messageHistory) do
+            print("Message removed: " .. entry.Text)
+            table.remove(terminal.messageHistory, 1)
+        end
+        print("History cleared")]]--
+        terminal.messageHistory.Clear()
         terminal.SyncHistory()
     end
 end
 
-function NeurOS.WriteToTerminalAsUser(item, message, client)
+function NeurOS.WriteToTerminalAsUser(item, message, passwordmsg) -- changed to use currentUser instead of client
+    local terminal = item.GetComponentString("Terminal")
+    local IsMobile = false
+    print(item.Name)
+    if item.Name == "Logbook" then IsMobile = true end
+    if terminal then
+        if not IsMobile then
+            --terminal.ReceiveSignal(Signal(1),item.Connections[4])
+            NeurOS.ClearTerminal(item)
+        else
+            NeurOS.ClearTerminal(item)
+        end
+        if NeurOS.Terminals[item] then
+            local user = NeurOS.Terminals[item].currentUser
+            if user == nil then
+                user = "NeurOS"
+            end
+            
+            -- Check if message starts with login or adduser
+            local args = NeurOS.ParseArguments(message)
+            if #args >= 3 and (args[1] == "login" or args[1] == "adduser") then
+                -- Replace password with asterisks
+                local censored = args[1] .. " " .. args[2] .. " " .. string.rep("*", #args[3])
+                terminal.showMessage = user .. ": " .. censored
+            else
+                terminal.showMessage = user .. ": " .. message
+            end
+            terminal.SyncHistory()
+        else
+            terminal.showMessage = message
+            terminal.SyncHistory()
+        end
+    end
+end
+
+function NeurOS.WriteToTerminalAsClient(item, message, client) -- will be unused, maybe for logging?
     local terminal = item.GetComponentString("Terminal")
     if terminal then
         terminal.ReceiveSignal(Signal(1),item.Connections[4])
