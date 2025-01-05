@@ -9,7 +9,8 @@ NeurOS = NeurOS or {
     Terminals = {},
     Commands = {},
     TerminalLookup = {},
-    FileSystem = {}
+    FileSystem = {},
+    help = {}
 }
 
 
@@ -20,4 +21,4 @@ dofile(FilePath.."/Lua/Scripts/Terminalinit.lua")
 dofile(FilePath.."/Lua/Scripts/Terminalfiles.lua")
 dofile(FilePath.."/Lua/Scripts/Terminalcommands.lua")
 dofile(FilePath.."/Lua/Scripts/Terminallistener.lua")
-
+dofile(FilePath.."/Lua/Scripts/helpdefs.lua")

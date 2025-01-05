@@ -1,4 +1,3 @@
-
 function NeurOS.InitializeTerminals()
     for _, item in pairs(Item.ItemList) do
         local terminal = item.GetComponentString("Terminal")
@@ -30,10 +29,15 @@ function NeurOS.RegisterTerminal(item, id)
         fileSystem = { root = rootFolder, currentDir = rootFolder },
         users = {},
         currentUser = nil,
-        sudoUser = nil
+        sudoUser = nil,
+        mail = {
+            inbox = {},
+            outbox = {},
+            nextMessageId = 1
+        }
     }
     NeurOS.TerminalLookup[id] = item
     print("Terminal " .. item.Name .. " initialized, terminal id = " .. id)
     NeurOS.WriteToTerminal(item, "Terminal initialized, terminal id = " .. id)
-    NeurOS.WriteToTerminal(item, "Please create your first user with: adduser <username>")
+    NeurOS.WriteToTerminal(item, "Please create your first user with: adduser <username>, or use help to see all commands")
 end

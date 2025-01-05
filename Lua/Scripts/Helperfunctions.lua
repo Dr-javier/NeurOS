@@ -1,5 +1,3 @@
-
-
 function NeurOS.GenerateTerminalId()
     return string.format("%06d", math.random(0, 999999))
 end
@@ -55,11 +53,6 @@ function NeurOS.ClearTerminal(item)
             print("history is nil")
             return
         end
-        --[[for _, entry in ipairs(terminal.messageHistory) do
-            print("Message removed: " .. entry.Text)
-            table.remove(terminal.messageHistory, 1)
-        end
-        print("History cleared")]]--
         terminal.messageHistory.Clear()
         terminal.SyncHistory()
     end
@@ -68,7 +61,6 @@ end
 function NeurOS.WriteToTerminalAsUser(item, message, passwordmsg) -- changed to use currentUser instead of client
     local terminal = item.GetComponentString("Terminal")
     local IsMobile = false
-    print(item.Name)
     if item.Name == "Logbook" then IsMobile = true end
     if terminal then
         if not IsMobile then
@@ -153,4 +145,38 @@ function ShowOnTerminal(terminal, message)
     end
     
     terminal.SyncHistory()
+end
+
+-- Add Mail Data Structures
+function NeurOS.CreateMessage(senderId, subject, content, attachmentPath)
+    return {
+        id = NeurOS.GenerateUniqueMessageId(),
+        sender = senderId,
+        subject = subject,
+        content = content,
+        attachment = attachmentPath,
+        read = false
+    }
+end
+
+function NeurOS.GenerateMessageId(terminal)
+    if not terminal.nextMessageId then
+        terminal.nextMessageId = 1
+    end
+    local id = terminal.nextMessageId
+    terminal.nextMessageId = terminal.nextMessageId + 1
+    return id
+end
+
+function NeurOS.GenerateUniqueMessageId()
+    -- Generate a random 6-digit number (100000 to 999999)
+    return tostring(math.random(100000, 999999))
+end
+
+-- Initialize Mail Storage for Terminals
+function NeurOS.InitializeMail(terminal)
+    terminal.mail = {
+        inbox = {},
+        outbox = {}
+    }
 end

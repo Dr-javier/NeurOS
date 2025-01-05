@@ -170,3 +170,245 @@ NeurOS.RegisterCommand("sudotest", function(id, args)
 
     NeurOS.WriteToTerminal(item, "Sudo test successful! Running as root user.")
 end)
+
+-- Register Mail Commands
+NeurOS.RegisterCommand("mail", function(id, args)
+    if #args < 1 then
+        NeurOS.WriteToTerminal(NeurOS.GetTerminal(id), "Usage: mail <send|inbox|download|read|delete> [parameters]")
+        return
+    end
+
+    local subcommand = args[1]:lower()
+    table.remove(args, 1) -- Remove the subcommand from args
+
+    if subcommand == "send" then
+        -- Usage: mail send <terminalID> <subject> <message> -attach <filePath>
+        NeurOS.HandleMailSend(id, args)
+    elseif subcommand == "inbox" then
+        NeurOS.HandleMailInbox(id)
+    elseif subcommand == "download" then
+        -- Usage: mail download <messageID>
+        NeurOS.HandleMailDownload(id, args)
+    elseif subcommand == "read" then
+        -- Usage: mail read <messageID>
+        NeurOS.HandleMailRead(id, args)
+    elseif subcommand == "delete" then
+        -- Usage: mail delete <messageID>
+        NeurOS.HandleMailDelete(id, args)
+    else
+        NeurOS.WriteToTerminal(NeurOS.GetTerminal(id), "Unknown mail subcommand: " .. subcommand)
+    end
+end)
+
+-- Handle 'mail send' command
+function NeurOS.HandleMailSend(senderId, args)
+    local terminal = NeurOS.Terminals[NeurOS.TerminalLookup[senderId]]
+    if not terminal or not terminal.currentUser then
+        NeurOS.WriteToTerminal(NeurOS.GetTerminal(senderId), "You must be logged in to send mail.")
+        return
+    end
+
+    -- Parse arguments
+    local attachIndex = nil
+    for i, arg in ipairs(args) do
+        if arg == "-attach" then
+            attachIndex = i
+            break
+        end
+    end
+
+    local recipientId, subject, message, attachmentPath = nil, nil, nil, nil
+    if attachIndex then
+        recipientId = args[1]
+        subject = args[2]
+        message = table.concat(args, " ", 3, attachIndex - 1)
+        attachmentPath = args[attachIndex + 1]
+    else
+        if #args < 3 then
+            NeurOS.WriteToTerminal(NeurOS.GetTerminal(senderId), "Usage: mail send <terminalID> <subject> <message> -attach <filePath>")
+            return
+        end
+        recipientId = args[1]
+        subject = args[2]
+        message = table.concat(args, " ", 3)
+    end
+
+    -- Validate recipient
+    local recipientTerminal = NeurOS.GetTerminal(recipientId)
+    if not recipientTerminal then
+        NeurOS.WriteToTerminal(NeurOS.GetTerminal(senderId), "Recipient terminal ID not found.")
+        return
+    end
+
+    -- Handle attachment
+    local attachmentStoredPath = nil
+    if attachmentPath then
+        local senderFile = NeurOS.FindFile(terminal.fileSystem.currentDir, attachmentPath)
+        if not senderFile then
+            NeurOS.WriteToTerminal(NeurOS.GetTerminal(senderId), "Attachment file not found: " .. attachmentPath)
+            return
+        end
+        -- Copy attachment to recipient's file system
+        local recipientTerminalData = NeurOS.Terminals[recipientTerminal]
+        local destPath = NeurOS.GenerateUniqueFilePath(recipientTerminalData.fileSystem.currentDir, senderFile.name)
+        NeurOS.CopyFile(senderFile, recipientTerminalData.fileSystem.currentDir, destPath)
+        attachmentStoredPath = destPath
+    end
+
+    -- Create message
+    local messageObj = NeurOS.CreateMessage(terminal.id, subject, message, attachmentStoredPath)
+    table.insert(terminal.mail.outbox, messageObj)
+    table.insert(NeurOS.Terminals[recipientTerminal].mail.inbox, messageObj)
+
+    NeurOS.WriteToTerminal(NeurOS.GetTerminal(senderId), "Message sent successfully.")
+    NeurOS.WriteToTerminal(recipientTerminal, "New mail received from terminal " .. terminal.id .. ".")
+end
+
+-- Handle 'mail inbox' command
+function NeurOS.HandleMailInbox(id)
+    local terminal = NeurOS.Terminals[NeurOS.TerminalLookup[id]]
+    if not terminal or not terminal.currentUser then
+        NeurOS.WriteToTerminal(NeurOS.GetTerminal(id), "You must be logged in to view inbox.")
+        return
+    end
+
+    local inbox = terminal.mail.inbox
+    if #inbox == 0 then
+        NeurOS.WriteToTerminal(NeurOS.GetTerminal(id), "Your inbox is empty.")
+        return
+    end
+
+    local message = "Inbox:\nID | From | Subject | Status | Attachment\n"
+    for _, msg in ipairs(inbox) do
+        local status = msg.read and "Read" or "Unread"
+        local attachment = msg.attachment and "[*]" or ""
+        message = message .. string.format("%s | %s | %s | %s | %s\n", msg.id, msg.sender, msg.subject, status, attachment)
+    end
+
+    NeurOS.WriteToTerminal(NeurOS.GetTerminal(id), message)
+end
+
+-- Handle 'mail read' command
+function NeurOS.HandleMailRead(id, args)
+    if #args < 1 then
+        NeurOS.WriteToTerminal(NeurOS.GetTerminal(id), "Usage: mail read <messageID>")
+        return
+    end
+
+    local messageId = args[1]
+    local terminal = NeurOS.Terminals[NeurOS.TerminalLookup[id]]
+    if not terminal or not terminal.currentUser then
+        NeurOS.WriteToTerminal(NeurOS.GetTerminal(id), "You must be logged in to read messages.")
+        return
+    end
+
+    local inbox = terminal.mail.inbox
+    for _, msg in ipairs(inbox) do
+        if msg.id == messageId then
+            NeurOS.WriteToTerminal(NeurOS.GetTerminal(id), string.format("From: %s\nSubject: %s\nMessage:\n%s", msg.sender, msg.subject, msg.content))
+            msg.read = true
+            return
+        end
+    end
+
+    NeurOS.WriteToTerminal(NeurOS.GetTerminal(id), "Message ID not found in inbox.")
+end
+
+-- Handle 'mail download' command
+function NeurOS.HandleMailDownload(id, args)
+    if #args < 1 then
+        NeurOS.WriteToTerminal(NeurOS.GetTerminal(id), "Usage: mail download <messageID>")
+        return
+    end
+
+    local messageId = args[1]
+    local terminal = NeurOS.Terminals[NeurOS.TerminalLookup[id]]
+    if not terminal or not terminal.currentUser then
+        NeurOS.WriteToTerminal(NeurOS.GetTerminal(id), "You must be logged in to download attachments.")
+        return
+    end
+
+    local inbox = terminal.mail.inbox
+    for _, msg in ipairs(inbox) do
+        if msg.id == messageId then
+            if not msg.attachment then
+                NeurOS.WriteToTerminal(NeurOS.GetTerminal(id), "No attachment found for this message.")
+                return
+            end
+
+            local file = NeurOS.FindFile(terminal.fileSystem.currentDir, msg.attachment)
+            if not file then
+                NeurOS.WriteToTerminal(NeurOS.GetTerminal(id), "Attachment file not found in your file system.")
+                return
+            end
+
+            -- Simulate downloading by copying the file to current directory
+            local destPath = NeurOS.GenerateUniqueFilePath(terminal.fileSystem.currentDir, file.name)
+            NeurOS.CopyFile(file, terminal.fileSystem.currentDir, destPath)
+
+            NeurOS.WriteToTerminal(NeurOS.GetTerminal(id), "Attachment downloaded to " .. destPath)
+            return
+        end
+    end
+
+    NeurOS.WriteToTerminal(NeurOS.GetTerminal(id), "Message ID not found in inbox.")
+end
+
+-- Handle 'mail delete' command
+function NeurOS.HandleMailDelete(id, args)
+    if #args < 1 then
+        NeurOS.WriteToTerminal(NeurOS.GetTerminal(id), "Usage: mail delete <messageID>")
+        return
+    end
+
+    local messageId = args[1]
+    local terminal = NeurOS.Terminals[NeurOS.TerminalLookup[id]]
+    if not terminal or not terminal.currentUser then
+        NeurOS.WriteToTerminal(NeurOS.GetTerminal(id), "You must be logged in to delete messages.")
+        return
+    end
+
+    local inbox = terminal.mail.inbox
+    for i, msg in ipairs(inbox) do
+        if msg.id == messageId then
+            table.remove(inbox, i)
+            NeurOS.WriteToTerminal(NeurOS.GetTerminal(id), "Message deleted successfully.")
+            return
+        end
+    end
+
+    NeurOS.WriteToTerminal(NeurOS.GetTerminal(id), "Message ID not found in inbox.")
+end
+
+-- Utility Functions for File Operations
+function NeurOS.FindFile(directory, filePath)
+    -- Implement logic to find a file in the given directory
+    for _, file in ipairs(directory.children) do
+        if file.name == filePath and not file.isFolder then
+            return file
+        end
+    end
+    return nil
+end
+
+function NeurOS.CopyFile(sourceFile, destinationDir, destPath)
+    -- Implement file copying logic
+    local newFile = {
+        name = destPath or sourceFile.name,
+        content = sourceFile.content,
+        isFolder = false,
+        children = {}
+    }
+    table.insert(destinationDir.children, newFile)
+end
+
+function NeurOS.GenerateUniqueFilePath(directory, fileName)
+    -- Ensure the file path is unique within the directory
+    local uniqueName = fileName
+    local counter = 1
+    while NeurOS.FindFile(directory, uniqueName) do
+        uniqueName = string.format("%s_%d", fileName, counter)
+        counter = counter + 1
+    end
+    return uniqueName
+end
