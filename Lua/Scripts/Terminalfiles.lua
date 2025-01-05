@@ -65,20 +65,44 @@ NeurOS.RegisterCommand("cd", function(id, args)
         return
     end
     
-    local folderName = args[1]
-    if folderName == ".." then
+    local path = args[1]
+    
+    -- Handle ./ at start (current directory)
+    if path:sub(1,2) == "./" then
+        path = path:sub(3)
+    end
+    
+    -- Handle multiple ../
+    while path:sub(1,3) == "../" do
+        if currentDir.parent then
+            currentDir = currentDir.parent
+            path = path:sub(4)  -- Remove the "../" part
+        else
+            NeurOS.WriteToTerminal(NeurOS.GetTerminal(id), "Already at root directory")
+            return
+        end
+    end
+    
+    -- Handle single ..
+    if path == ".." then
         if currentDir.parent then
             terminalData.fileSystem.currentDir = currentDir.parent
+        else
+            NeurOS.WriteToTerminal(NeurOS.GetTerminal(id), "Already at root directory")
         end
-    else
+        return
+    end
+    
+    -- Handle remaining path (if any)
+    if path ~= "" then
         for _, child in ipairs(currentDir.children) do
-            if child.name == folderName and child.type == "folder" then
+            if child.name == path and child.type == "folder" then
                 terminalData.fileSystem.currentDir = child
                 return
             end
         end
         local item = NeurOS.GetTerminal(id)
-        NeurOS.WriteToTerminal(item, "No such folder: " .. folderName)
+        NeurOS.WriteToTerminal(item, "No such folder: " .. path)
     end
 end)
 

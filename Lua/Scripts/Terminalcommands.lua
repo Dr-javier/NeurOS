@@ -34,12 +34,19 @@ NeurOS.RegisterCommand("adduser", function(id, args)
         return
     end
 
+    local isFirstUser = next(terminal.users) == nil
     terminal.users[username] = {
         password = password,
-        isSudo = next(terminal.users) == nil  -- First user gets sudo privileges
+        isSudo = isFirstUser  -- First user gets sudo privileges
     }
 
     NeurOS.WriteToTerminal(item, "User created successfully")
+    
+    -- Auto-login if this is the first user
+    if isFirstUser then
+        terminal.currentUser = username
+        NeurOS.WriteToTerminal(item, "Logged in as: " .. username)
+    end
 end)
 
 NeurOS.RegisterCommand("setpass", function(id, args)
